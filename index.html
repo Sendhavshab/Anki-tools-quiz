@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANKI - Unlimited Quiz</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #quiz-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #question {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        #options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option-btn {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+
+        #score {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+
+        .correct {
+            background-color: #5cb85c; /* Green */
+        }
+
+        .incorrect {
+            background-color: #d9534f; /* Red */
+        }
+    </style>
+</head>
+<body>
+    <div id="quiz-container">
+        <div id="question"></div>
+        <div id="options"></div>
+        <div id="result"></div>
+        <div id="score"></div>
+    </div>
+
+    <script>
+        const apiUrl = 'https://opentdb.com/api.php?amount=50&difficulty=easy';
+        let currentQuestion = 0;
+        let score = 0;
+        let questions = [];
+
+        function fetchQuestions() {
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    questions = data.results;
+                    displayQuestion(questions[currentQuestion]);
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        function displayQuestion(question) {
+            const questionElement = document.getElementById('question');
+            const optionsElement = document.getElementById('options');
+            const resultElement = document.getElementById('result');
+            const scoreElement = document.getElementById('score');
+
+            questionElement.textContent = decodeHtml(question.question);
+            optionsElement.innerHTML = '';
+
+            const allOptions = [...question.incorrect_answers, question.correct_answer];
+            const shuffledOptions = shuffleArray(allOptions);
+
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                button.textContent = decodeHtml(option);
+                button.addEventListener('click', () => checkAnswer(option, question.correct_answer));
+                optionsElement.appendChild(button);
+            });
+
+            resultElement.textContent = '';
+            scoreElement.textContent = `Score: ${score}/50`;
+        }
+
+        function checkAnswer(selectedOption, correctOption) {
+            const options = document.querySelectorAll('.option-btn');
+            const resultElement = document.getElementById('result');
+            const scoreElement = document.getElementById('score');
+
+            options.forEach(option => {
+                option.disabled = true; // Disable options after an answer is clicked
+                if (option.textContent === decodeHtml(correctOption)) {
+                    option.classList.add('correct');
+                } else if (option.textContent === decodeHtml(selectedOption)) {
+                    option.classList.add('incorrect');
+                }
+            });
+
+            setTimeout(() => {
+                options.forEach(option => {
+                    option.disabled = false; // Enable options for the next question
+                    option.classList.remove('correct', 'incorrect'); // Reset option colors
+                });
+
+                if (selectedOption === correctOption) {
+                    resultElement.textContent = 'Correct!';
+                    score++;
+                } else {
+                    resultElement.textContent = 'Incorrect. The correct answer was: ' + decodeHtml(correctOption);
+                }
+
+                currentQuestion++;
+                if (currentQuestion < 50) {
+                    displayQuestion(questions[currentQuestion]);
+                } else {
+                    resultElement.textContent = `Quiz completed! Your final score: ${score}/50`;
+                    scoreElement.textContent = ''; // Hide the score after quiz completion
+                }
+            }, 2000);
+        }
+
+        function shuffleArray(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        function decodeHtml(html) {
+            const txt = document.createElement('textarea');
+            txt.innerHTML = html;
+            return txt.value;
+        }
+
+        // Fetch questions when the page loads
+        fetchQuestions();
+    </script>
+</body>
+</html>
